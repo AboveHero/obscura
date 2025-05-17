@@ -1,6 +1,16 @@
 require("dotenv").config();
+const { ensureBucketExists } = require("./s3/client");
 const express = require("express");
 const server = express();
+
+(async () => {
+    try {
+        await ensureBucketExists();
+    } catch (err) {
+        console.error("Could not initialize bucket. Exiting.", err);
+        process.exit(1);
+    }
+})
 
 
 

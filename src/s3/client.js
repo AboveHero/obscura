@@ -6,6 +6,8 @@ const {
     GetObjectCommand,
     DeleteObjectCommand,
     ListObjectsV2Command,
+    CreateBucketCommand,
+    HeadBucketCommand
   } = require("@aws-sdk/client-s3");
 
 // const { getSignedUrl } = require('@aws-sdk/s3-request-presigner'); // optional if you need presigned links
@@ -29,6 +31,23 @@ const s3 = new S3Client({
 
 // Apparently you can't set default bucket name in the client constructor
 // So we have to do this stupid workaround
+
+// Check if bucket exists
+async function checkBucket() {
+    const command = new HeadBucketCommand({
+        Bucket: S3_BUCKET,
+    });
+    return s3.send(command);
+}
+
+// Create a bucket
+async function createBucket() {
+    const command = new CreateBucketCommand({
+        Bucket: S3_BUCKET,
+    });
+    return s3.send(command);
+}
+
 // Custom put
 async function putObject(params) {
     const command = new PutObjectCommand({
@@ -75,4 +94,20 @@ async function listObjects() {
     return data.Contents || [];
 }
 
-module.exports = { s3, putObject, checkObject, getObject, deleteObject, listObjects };
+async function ensureBucketExists() {
+    try {
+        await checkBucket();
+        console.log(`✅ Bucket "${S3_BUCKET}" already exists.`);
+    } catch (err) {
+        if (err.Code === "NoSuchBucket" || err.name === "NotFound") {
+            console.warn(`⚠️ Bucket "${S3_BUCKET}" not found. Creating it...`);
+            await createBucket();
+            console.log(`🎉 Bucket "${S3_BUCKET}" created successfully.`);
+        } else {
+            console.error("❌ Failed to check/create bucket:", err);
+            throw err;
+        }
+    }
+}
+
+module.exports = { s3, putObject, checkObject, getObject, deleteObject, listObjects, ensureBucketExists };
