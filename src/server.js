@@ -3,6 +3,8 @@ const { ensureBucketExists } = require("./s3/client");
 const express = require("express");
 const server = express();
 
+server.set("trust proxy", 1); // trust first proxy
+
 (async () => {
     try {
         await ensureBucketExists();
