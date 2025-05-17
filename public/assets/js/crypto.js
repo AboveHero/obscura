@@ -1,4 +1,9 @@
 // ------------------------------------------
+// Required traffic encryption notice
+// ------------------------------------------
+if (!window.crypto || !window.crypto.subtle) throw new Error("Web Crypto API not available. HTTPS is required.");
+
+// ------------------------------------------
 // PBKDF2 Key Derivation
 // ------------------------------------------
 async function deriveKey(password, salt) {
