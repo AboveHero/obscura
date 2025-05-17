@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Obscura</title>
+        <link rel="stylesheet" href="./assets/css/n0tbootstrap.css" />
+        <link rel="stylesheet" href="./assets/css/styles.css" />
+        <link rel="stylesheet" href="./assets/css/modals.css" />
+    </head>
+    <body>
+        <div class="container-fluid">
+            <!-- Header -->
+            <div id="header_wrapper">
+                <div class="row mb-5 mt-1" id="header">
+                    <div class="col-md-6 mr-auto ml-auto">
+                        <a href="/" style="display: block">
+                            <h1 id="page_title" class="text-center">
+                                <b>Secure</b>
+                                <img src="./assets/img/badge.svg" class="logo_badge" />
+                                Notes
+                            </h1>
+
+                            <h4 class="subtitle text-center mt-1">
+                                A <b>s<i>3</i>cure</b> way to share
+                                <div class="censored">sensitive</div>
+                                information
+                            </h4>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!-- End Header -->
+
+            <!-- Main Content -->
+            <div class="container mb-3 mt-5" style="min-height: 60vh">
+                <div class="row mt-5 mb-5">
+                    <div class="col-md-6 mr-auto ml-auto">
+                        <h1>New link</h1>
+                        <p class="subtext">Create a secret note. Once read, it will self-destruct.</p>
+
+                        <div id="input_container">
+                            <textarea
+                                id="secret_input"
+                                placeholder="Write your secret here..."
+                                class="textarea"
+                            ></textarea>
+
+                            <input
+                                type="password"
+                                id="pwd_input"
+                                placeholder="(Optional) Enter a password 🔑"
+                                class="input-field"
+                            />
+
+                            <label for="ttl_input">Expire in:</label>
+                            <select id="ttl_input" class="dropdown">
+                                <option value="1">1 Day</option>
+                                <option value="2">2 Days</option>
+                                <option value="3">3 Days</option>
+                                <option value="7">1 Week</option>
+                                <option value="14">2 Weeks</option>
+                                <option value="30">1 Month</option>
+                            </select>
+
+                            <button id="create_secret" class="btn">Create Secret Link 🔐</button>
+                        </div>
+
+                        <div id="spinner" class="spinner" style="display: none">
+                            <div class="loader"></div>
+                        </div>
+
+                        <div id="result_container">
+                            <h3 class="text-center">Your link is ready!</h3>
+                            <h6 class="ml-auto" style="float: right">Click to copy</h6>
+                            <div class="copy_box" id="linkContainer">
+                                <div id="linkCopied" class="copied_msg">Copied! ✅</div>
+                                <span id="link_text"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <section class="how-it-works">
+                    <h2>How This App Works</h2>
+                    <p class="intro-text">
+                        Secret Notes is built with a <b>zero-knowledge</b> security model. Messages are
+                        <b>encrypted in the browser</b>, stored in an <b>object storage system</b>, and deleted after a
+                        single read. Below is a detailed breakdown of the process.
+                    </p>
+
+                    <div class="steps">
+                        <div class="step-card">
+                            <h3>🔐 Client-Side Encryption</h3>
+                            <p>
+                                Your secret is encrypted <b>before it leaves your browser</b> using the AES-GCM
+                                encryption standard. A unique <b>256-bit key</b> (derived from your password) is used to
+                                encrypt the message.
+                            </p>
+                        </div>
+
+                        <div class="step-card">
+                            <h3>🗂️ Secure Object Storage</h3>
+                            <p>
+                                The encrypted message is stored in an <b>S3-compatible object storage system</b>. We
+                                store metadata like <b>creation time & expiration</b> but never store plaintext data.
+                            </p>
+                        </div>
+
+                        <div class="step-card">
+                            <h3>🚀 One-Time Read System</h3>
+                            <p>
+                                Once a secret is accessed, it is <b>immediately deleted</b> from storage. This ensures
+                                that messages can only be read <b>once</b> and never retrieved again.
+                            </p>
+                        </div>
+
+                        <div class="step-card">
+                            <h3>🕵️ Zero-Knowledge Security</h3>
+                            <p>
+                                Since encryption happens <b>in your browser</b>, we never see your plaintext message.
+                                The decryption key is never transmitted to our server, meaning
+                                <b>only the recipient</b> can decrypt it.
+                            </p>
+                        </div>
+
+                        <div class="step-card">
+                            <h3>📜 Encryption Standard</h3>
+                            <p>
+                                We use <b>AES-256-GCM</b> encryption, a
+                                <b>modern, secure, and efficient encryption standard</b>. AES-GCM provides
+                                <b>authentication</b>, preventing message tampering.
+                            </p>
+                        </div>
+
+                        <div class="step-card">
+                            <h3>📅 Automatic Cleanup</h3>
+                            <p>
+                                Secrets expire based on the <b>time-to-live (TTL) setting</b> chosen by the sender.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <footer class="footer fixed-bottom">
+                <p>
+                    Made with ♥ by <a href="https://github.com/abovehero">AboveHero</a> ·
+                    <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a>
+                </p>
+            </footer>
+        </div>
+
+        <script src="./assets/js/main.js" type="module" defer></script>
+    </body>
+</html>
