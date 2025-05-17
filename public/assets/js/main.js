@@ -177,10 +177,21 @@ async function createSecret() {
             },
             body: JSON.stringify({ encryptedObj }),
         });
-        let data = await res.json();
 
-        // Hide spinner
-        el("#spinner").style.display = "none";
+        if (!res.ok) {
+            const errorText = await res.text();
+            // Display error modal
+            modal.create({
+                position: "right-bottom",
+                type: "alert",
+                title: "Error creating secret",
+                message: errorText || "Failed to create secret.",
+            });
+            el("#spinner").style.display = "none";
+            return;
+        }
+
+        let data = await res.json();
 
         if (data.error) {
             // Display error modal
@@ -212,6 +223,8 @@ async function createSecret() {
             message: "Your secret has been created successfully.",
             autoClose: 2000
         });
+        // Hide spinner
+        el("#spinner").style.display = "none";
     } catch (err) {
         console.error(err);
         el("#spinner").style.display = "none";
