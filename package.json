@@ -5,7 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "app": "pm2 start -n secure_notes_app app.js",
-    "dev": "nodemon -w server.js -w src -w public app.js"
+    "dev": "nodemon -w src -w app.js app.js"
   },
   "author": "Sebastian Söderdahl",
   "license": "MIT",
