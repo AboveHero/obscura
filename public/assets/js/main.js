@@ -223,11 +223,19 @@ async function fetchCipherText() {
 
     if (!secretId) {
         el("#spinner").style.display = "none";
-        if (isEl("#manual_input_container")) {
-            el("#manual_input_container").style.display = "block";
-        }
+
+        // Show manual input
+        el("#manual_input_container")?.classList.remove("hidden");
+
+        // Hide decrypt box
+        el("#decrypt_container")?.classList.add("hidden");
+
         return;
     }
+
+    // If we do have a secret ID, reverse the visibility
+    el("#manual_input_container")?.classList.add("hidden");
+    el("#decrypt_container")?.classList.remove("hidden");
 
     try {
         const res = await fetch(`/api/secret/${secretId}`);
@@ -335,29 +343,34 @@ let manualRetrieval = () => {
             position: "right-bottom",
             type: "warning",
             title: "Please enter a valid secret ID",
-            message: data.error,
+            message: "Missing secret ID",
         });
         return;
     }
-    window.location.href = `/secret?id=${secretId}`;
+
+    // Trigger fetch immediately
+    history.replaceState(null, "", `/secret?id=${secretId}`);
+    fetchCipherText(); // <- run right away instead of reloading
 };
 
 // Event Listeners
 document.on("DOMContentLoaded", () => {
     el("#retrieveButton")?.on("click", manualRetrieval);
-    // el("#decryptButton")?.on("click", () => decryptAndShow());
     el("#decryptButton")?.on("click", () => {
         const secretId = new URLSearchParams(window.location.search).get("id");
         decryptAndShow(secretId);
     });
-    el("#main_nav button", true).forEach((button) => {
-        button.on("click", function () {
-            let target = this.getAttribute("href");
-            if (!target) return;
-            document.location.href = target;
-        });
+    el("input#secret_id").on("keydown", (e) => {
+        if (e.key === "Enter" || e.keyCode === 13) {
+            manualRetrieval();
+        }
     });
+    el("#pwd_input").on("keydown", (e) => {
+        if (e.key === "Enter" || e.keyCode === 13) {
+            const secretId = new URLSearchParams(window.location.search).get("id");
+            decryptAndShow(secretId);
+        }
+    });
+    // Fetch secret on page load
+    fetchCipherText();
 });
-
-// Fetch secret on page load
-fetchCipherText();
