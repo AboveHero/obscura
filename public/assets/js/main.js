@@ -3,14 +3,7 @@ import Modal from "./modals.js";
 
 const modal = new Modal();
 
-/**
- * Easy selector
- */
-/**
- * Extended "select" function.
- * If "target" is a string, treat as a selector;
- * if "target" is an element, return it directly.
- */
+// DOM selector
 const el = (target, all = false) => {
     if (isEl(target)) {
         return target;
@@ -31,11 +24,7 @@ const el = (target, all = false) => {
     return null;
 };
 
-/**
- * Easy event listener
- * Extended "on" prototype patch
- */
-
+// Prototype extension event listeners
 (function () {
     if (!Document.prototype.on) {
         Document.prototype.on = function (type, listener, options) {
@@ -56,60 +45,12 @@ const el = (target, all = false) => {
     }
 })();
 
-/**
- * Easy on scroll event listener
- */
-const onscroll = (DOM, listener) => {
-    DOM.addEventListener("scroll", listener);
-};
-
-/**
- * Check if target is an Element
- */
+// DOM element check
 const isEl = (obj) => {
     return obj instanceof Element || obj instanceof HTMLDocument;
 };
 
-/**
- * Check if element has a class
- */
-const hasClass = (el, cls) => {
-    return !!el.className.match(new RegExp("(\\s|^)" + cls + "(\\s|$)"));
-};
-
-/**
- * Drop shoulders
- */
-const dropShoulders = (a, b) => {
-    if (a && b === undefined) {
-        let header = el(".fixed-top.header", false);
-        header.nextElementSibling.style.marginTop = `${header.offsetHeight}px`;
-    }
-
-    if (a === undefined && b === undefined) {
-        let pageHeaders = el(".fixed-top.header", true);
-        pageHeaders.forEach((header) => {
-            header.nextElementSibling.style.marginTop = `${header.offsetHeight}px`;
-        });
-    }
-
-    if (a && b) {
-        let head = el(a, false);
-        let belly = el(b, false);
-        if (!isEl(a) || !isEl(b)) return false;
-
-        b.style.marginTop = a.offsetHeight + "px";
-    }
-};
-
-/**
- * MAIN
- */
-
-/**
- * UTILITIES
- */
-
+// Copy to clipboard
 const copyToClipboard = (element, notification) => {
     let text = el(element).textContent.trim();
     if (!text) return;
@@ -127,22 +68,12 @@ const copyToClipboard = (element, notification) => {
         });
 };
 
-let selectables = el(".selectable", true);
+const toHex = (buf) =>
+    Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
 
-selectables.forEach((element) => {
-    element.on("click", function () {
-        let range = document.createRange();
-        range.selectNodeContents(this);
-        let selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-    });
-});
-
-/**
- * SECRETS
- */
-
+// Encrypt and create secret
 async function createSecret() {
     let results = el("#result_container");
     let inputs = el("#input_container");
@@ -155,27 +86,31 @@ async function createSecret() {
             type: "warning",
             title: "Secret is empty",
             message: "Please enter a message before creating a secret.",
-            autoClose: 4000
+            autoClose: 4000,
         });
         return;
     }
     let pwd = el("#pwd_input").value || null;
 
     try {
+        const secretId = crypto.randomUUID();
         // Hide inputs and show spinner
         inputs.style.display = "none";
         el("#spinner").style.display = "flex";
 
         // Encrypt secret in browser
         const { encryptedObj, generatedPassword } = await encryptData(secret, pwd);
+        const key = pwd || generatedPassword;
+
+        const encoder = new TextEncoder();
+        const deleteHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(secretId + key));
+        const deleteHash = toHex(deleteHashBuffer);
 
         // Push secret to object storage
         let res = await fetch("/api/secret", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ encryptedObj }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: secretId, encryptedObj, deleteHash }),
         });
 
         if (!res.ok) {
@@ -201,6 +136,7 @@ async function createSecret() {
                 title: "Error creating secret",
                 message: data.error,
             });
+            return;
         }
 
         // Display result container
@@ -221,7 +157,7 @@ async function createSecret() {
             type: "success",
             title: "Secret created",
             message: "Your secret has been created successfully.",
-            autoClose: 2000
+            autoClose: 2000,
         });
         // Hide spinner
         el("#spinner").style.display = "none";
@@ -358,10 +294,19 @@ async function decryptAndShow(secretId, secretKey) {
             let plaintext = await decryptData(encryptedObj, secretKey);
             displaySecret(plaintext);
 
-            // 🔥 Now tell the backend to delete the secret (only if decryption succeeded)
+            // 🔑 Generate delete proof
+            const encoder = new TextEncoder();
+            const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(secretId + secretKey));
+            const deleteProof = Array.from(new Uint8Array(hashBuf))
+                .map((b) => b.toString(16).padStart(2, "0"))
+                .join("");
+
+            // 🔥 Now tell the backend to delete the secret
             await fetch(`/api/secret/${secretId}`, {
                 method: "DELETE",
-                headers: { Authorization: "Obscura-Delete" }, // Extra header for security
+                headers: {
+                    "X-Delete-Proof": deleteProof,
+                },
             });
 
             displayBurnNotice("success");

@@ -1,20 +1,25 @@
 const express = require("express");
 const router = express.Router();
-const { getObject, putObject, deleteObject } = require("../s3/client");
-const { v4: uuidv4 } = require("uuid");
-const { streamToString } = require("../helper/stream")
+const { getObject, putObject, checkObject, deleteObject } = require("../s3/client");
+const { streamToString } = require("../helper/stream");
 const Firewall = require("../middleware/firewall");
 
 const sameorigin = new Firewall();
 
 router.post("/", sameorigin.middleware(), async (req, res) => {
     try {
-        const { encryptedObj } = req.body;
-        if (!encryptedObj || !encryptedObj.ciphertext || !encryptedObj.salt || !encryptedObj.iv) {
+        if (!req.body.id || !req.body.encryptedObj || !req.body.deleteHash) {
+            return res.status(400).json({ error: "Missing required fields." });
+        }
+
+        const { id: secretId, encryptedObj, deleteHash } = req.body;
+        if (!/^[a-f0-9]{64}$/i.test(deleteHash)) {
+            return res.status(400).json({ error: "Invalid delete hash format." });
+        }
+        if (!encryptedObj.ciphertext || !encryptedObj.salt || !encryptedObj.iv) {
             return res.status(400).json({ error: "No ciphertext provided." });
         }
 
-        const secretId = uuidv4();
         const nowMs = Date.now().toString();
 
         // Store the secret in S3
@@ -23,7 +28,8 @@ router.post("/", sameorigin.middleware(), async (req, res) => {
             Body: JSON.stringify(encryptedObj),
             Metadata: {
                 "x-creation-timestamp": nowMs,
-                "x-ttl-days": "1", // default 1-day
+                "x-ttl-days": "1",
+                "x-delete-hash": deleteHash,
             },
         });
 
@@ -84,22 +90,28 @@ router.get("/:id", async (req, res) => {
 });
 
 router.delete("/:id", sameorigin.middleware(), async (req, res) => {
-  try {
-      const { id } = req.params;
+    try {
+        const { id } = req.params;
+        const deleteProof = req.headers["x-delete-proof"];
 
-      // ✅ Header Check: Ensure request is coming from the frontend
-      if (req.headers["authorization"] !== "Obscura-Delete") {
-          console.warn(`❌ Missing or invalid authorization header from ${clientIp}`);
-          return res.status(403).json({ error: "Unauthorized" });
-      }
+        if (!deleteProof) {
+            console.warn(`❌ Missing delete proof for secret ${id}`);
+            return res.status(400).json({ error: "Missing delete proof." });
+        }
 
-      // 🔥 DELETE the secret after verification
-      await deleteObject(id);
+        const head = await checkObject(id);
+        const storedHash = head.Metadata?.["x-delete-hash"];
 
-      res.status(200).json({ message: "Secret deleted successfully." });
-  } catch (err) {
-      console.error(`❌ Error deleting secret ${id}:`, err);
-      res.status(500).json({ error: "Failed to delete secret." });
-  }
+        if (!storedHash || storedHash !== deleteProof) {
+            console.warn(`❌ Delete proof mismatch for secret ${id}`);
+            return res.status(403).json({ error: "Invalid delete proof." });
+        }
+
+        await deleteObject(id);
+        res.status(200).json({ message: "Secret deleted successfully." });
+    } catch (err) {
+        console.error(`❌ Error deleting secret ${req.params.id}:`, err);
+        res.status(500).json({ error: "Failed to delete secret." });
+    }
 });
 module.exports = router;
