@@ -93,7 +93,7 @@ async function createSecret() {
         });
         return;
     }
-    let pwd = el("#pwd_input").value || null;
+    let pwd = el("#pwd_input_create")?.value || null;
 
     try {
         const secretId = crypto.randomUUID();
@@ -224,11 +224,12 @@ async function fetchCipherText() {
     if (!secretId) {
         el("#spinner").style.display = "none";
 
-        // Show manual input
         el("#manual_input_container")?.classList.remove("hidden");
-
-        // Hide decrypt box
         el("#decrypt_container")?.classList.add("hidden");
+
+        setTimeout(() => {
+            el("#secret_id")?.focus();
+        }, 0);
 
         return;
     }
@@ -281,7 +282,7 @@ async function fetchCipherText() {
 
 async function decryptAndShow(secretId, secretKey) {
     if (!secretKey) {
-        secretKey = el("#pwd_input").value.trim();
+        secretKey = el("#pwd_input")?.value.trim();
     }
 
     if (!secretKey || !encryptedObj) {
@@ -321,7 +322,7 @@ async function decryptAndShow(secretId, secretKey) {
         el("#errorMsg").style.display = "block";
 
         setTimeout(() => {
-            el("#pwd_input").classList.remove("shake");
+            el("#pwd_input")?.classList.remove("shake");
         }, 400);
     } finally {
         el("#decryptButton").disabled = false;
@@ -348,9 +349,8 @@ let manualRetrieval = () => {
         return;
     }
 
-    // Trigger fetch immediately
-    history.replaceState(null, "", `/secret?id=${secretId}`);
-    fetchCipherText(); // <- run right away instead of reloading
+    // Update URL and reload to re-trigger full page logic (including focus)
+    window.location.href = `/secret?id=${secretId}`;
 };
 
 // Event Listeners
@@ -360,17 +360,29 @@ document.on("DOMContentLoaded", () => {
         const secretId = new URLSearchParams(window.location.search).get("id");
         decryptAndShow(secretId);
     });
-    el("input#secret_id").on("keydown", (e) => {
+    el("input#secret_id")?.on("keydown", (e) => {
         if (e.key === "Enter" || e.keyCode === 13) {
             manualRetrieval();
         }
     });
-    el("#pwd_input").on("keydown", (e) => {
+    el("#pwd_input")?.on("keydown", (e) => {
         if (e.key === "Enter" || e.keyCode === 13) {
             const secretId = new URLSearchParams(window.location.search).get("id");
             decryptAndShow(secretId);
         }
     });
+
+    // Focus logic
+    const urlParams = new URLSearchParams(window.location.search);
+    const secretKey = urlParams.get("key");
+
+    // If on create page
+    if (el("#secret_input")) {
+        el("#secret_input").focus();
+    } else if (!secretKey) {
+        el("#pwd_input")?.focus();
+    }
+
     // Fetch secret on page load
     fetchCipherText();
 });
