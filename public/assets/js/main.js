@@ -68,10 +68,13 @@ const copyToClipboard = (element, notification) => {
         });
 };
 
-const toHex = (buf) =>
-    Array.from(new Uint8Array(buf))
+const sha256Hex = async (input) => {
+    const encoder = new TextEncoder();
+    const buffer = await crypto.subtle.digest("SHA-256", encoder.encode(input));
+    return Array.from(new Uint8Array(buffer))
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
+};
 
 // Encrypt and create secret
 async function createSecret() {
@@ -101,10 +104,8 @@ async function createSecret() {
         // Encrypt secret in browser
         const { encryptedObj, generatedPassword } = await encryptData(secret, pwd);
         const key = pwd || generatedPassword;
-
-        const encoder = new TextEncoder();
-        const deleteHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(secretId + key));
-        const deleteHash = toHex(deleteHashBuffer);
+        // Generate delete hash
+        const deleteHash = await sha256Hex(secretId + key);
 
         // Push secret to object storage
         let res = await fetch("/api/secret", {
@@ -295,12 +296,7 @@ async function decryptAndShow(secretId, secretKey) {
             displaySecret(plaintext);
 
             // 🔑 Generate delete proof
-            const encoder = new TextEncoder();
-            const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(secretId + secretKey));
-            const deleteProof = Array.from(new Uint8Array(hashBuf))
-                .map((b) => b.toString(16).padStart(2, "0"))
-                .join("");
-
+            const deleteProof = await sha256Hex(secretId + secretKey);
             // 🔥 Now tell the backend to delete the secret
             await fetch(`/api/secret/${secretId}`, {
                 method: "DELETE",
